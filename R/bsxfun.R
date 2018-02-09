@@ -1,3 +1,36 @@
+#' Broadcasting an array to a wanted shape
+#'
+#' Extending a given array to match a wanted shape, similar to repmat.
+#' @param arr Array to be broadcasted
+#' @param dims Desired output dimensions
+#'
+#' @return array of dimension dim
+#' @examples
+#'   M = array(1:12,dim=c(1,2,3))
+#'   N = broadcast(M,c(4,2,3))
+#'
+#' @note # Fri Feb  9 14:41:25 2018 ------------------------------
+#' @author Feng Geng (shouldsee.gem@gmail.com)
+#' @export
+broadcast  <- function(arr, dims){
+  DIM = dim(arr)
+  MARGIN = which(DIM==dims)
+  if (length(MARGIN)!=0){
+    if( !all(DIM[-MARGIN]==1) ){
+      errmsg = sprintf("All non-singleton dimensions must be equal: Array 1 [%s] , Wanted shape: [%s]",
+                       paste(DIM,collapse = ','),
+                       paste(dims,collapse = ','))
+      stop(errmsg)
+    }
+    perm <- c(MARGIN, seq_along(dims)[-MARGIN])
+  }else{
+    perm <- c(seq_along(dims))
+  }
+
+  arr = array(aperm(arr, perm), dims[perm])
+  arr = aperm(arr, order(perm)
+              ,resize = T)
+}
 #' Broadcasting an operation on multi-dimensinoal arrays
 #'
 #' Broadcasting two arrays to the same shape and then apply FUN.
@@ -12,37 +45,50 @@
 #'   N = rbind(c(1,2))
 #'   O = bsxfun(M,N,'*')
 #' @note
-#' #Sun Jan 21 01:27:48 2018 ------------------------------
+#'
+#' # Fri Feb  9 14:41:25 2018 ------------------------------
 #'
 #' @author Feng Geng (shouldsee.gem@gmail.com)
 #' @export
 #'
-bsxfun <-
-  function(arrA,arrB,FUN = '+'){
+bsxfun <-  function(arrA,arrB,FUN = '+',...){
+   FUN <- match.fun(FUN)
    arrA <- as.array(arrA)
    arrB <- as.array(arrB)
    dimA <- dim(arrA)
    dimB <- dim(arrB)
-   if (length(dimA) >= length(dimB)){
-     arrL = list(arrA,arrB)
-   }else{
-     arrL = list(arrB,arrA)
+   if (identical(dimA,dimB)){
+     #### Trivial scenario
+     arr = FUN(arrA,arrB, ...)
+     return(arr)
    }
+
+   arrL = list(arrA,arrB)
+   orient <- order(sapply(arrL,length))
+   arrL = arrL[orient]
    dim1 <- dim(arrL[[1]])
    dim2 <- dim(arrL[[2]])
-   length(dim1)<-length(dim2)
+   dim1 <- c(dim1, rep(1,length(dim2)-length(dim1))) #### Padding smaller array to be of same length
+   dim(arrL[[1]])<-dim1;
    nonS = (dim1!=1) & (dim2!=1)
 
    if( !all(dim1[nonS]== dim2[nonS])){
-     errmsg = sprintf("All non-singleton axis must be equal: Array 1 [%s] , Array 2 [%s]",
+     errmsg = sprintf("All non-singleton dimensions must be equal: Array 1 [%s] , Array 2 [%s]",
                       paste(dimA,collapse = ','),
                       paste(dimB,collapse = ','))
      stop(errmsg)
    }
-   MARG = which(nonS)
-   sweep(arrL[[1]],arrL[[2]],MARGIN = MARG,FUN = FUN)
+   ### Broadcasting to fill singleton dimensions
+   # browser()
+   dims  <- pmax(dim1,dim2)
+   arrL = lapply(arrL,function(x)broadcast(x,dims))
+   arrL = arrL[order(orient)]
+   arr = FUN(arrL[[1]],arrL[[2]], ...)
+   return(arr)
 }
-#
+
+
+
 if (interactive()){
 
   M = array(1:12,dim=c(2,2,3))
@@ -62,8 +108,6 @@ if (interactive()){
   ##
 }
 
-
-#
 #
 # {
 #   library(microbenchmark)
@@ -80,8 +124,18 @@ if (interactive()){
 #     erg_3 = pracma::bsxfun('*', pracma::repmat(a, nsample, 1), b)
 #   ))
 #   # Unit: microseconds
-#   # expr      min        lq      mean    median        uq       max neval cld
-#   # erg_1   88.803   96.9395  113.8098  106.7960  125.7245   204.942   100  a
-#   # erg_2  108.456  123.8730  148.4552  142.8465  161.7485   250.351   100  a
-#   # erg_3 4431.176 4525.1725 4715.9614 4587.9385 4676.1885 12920.696   100  b
+#   # expr      min       lq      mean    median       uq       max neval cld
+#   # erg_1   94.002  108.327  129.1773  122.7575  142.660   248.796   100  a
+#   # erg_2 1152.270 1212.464 1353.5238 1326.7625 1474.444  1979.061   100  b
+#   # erg_3 4744.422 4825.741 5323.7169 4882.8810 4997.707 40836.930   100  c
+# }
+#
+#
+#
+# {
+#   erg_1 = sweep(b, 2, a, '*')
+#   erg_2 = bsxfun(b,  rbind(a), '*')
+#   erg_3 = pracma::bsxfun('*', pracma::repmat(a, nsample, 1), b)
+#   stopifnot(identical(erg_1,erg_2,erg_3))
+#
 # }
