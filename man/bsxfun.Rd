@@ -4,7 +4,7 @@
 \alias{bsxfun}
 \title{Broadcasting an operation on multi-dimensinoal arrays}
 \usage{
-bsxfun(arrA, arrB, FUN = "+")
+bsxfun(arrA, arrB, FUN = "+", ...)
 }
 \arguments{
 \item{arrA, arrB}{Arrays to perfom the operator FUN(arrA,arrB)}
@@ -18,7 +18,7 @@ An array of the shape with each dimension being the maximum of dimA,dimB.
 Broadcasting two arrays to the same shape and then apply FUN.
 }
 \note{
-#Sun Jan 21 01:27:48 2018 ------------------------------
+# Fri Feb  9 14:41:25 2018 ------------------------------
 }
 \examples{
 
@@ -27,5 +27,5 @@ Broadcasting two arrays to the same shape and then apply FUN.
   O = bsxfun(M,N,'*')
 }
 \author{
-*Feng Geng (shouldsee.gem@gmail.com)*
+Feng Geng (shouldsee.gem@gmail.com)
 }

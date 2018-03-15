@@ -14,15 +14,15 @@
 #' @export
 broadcast  <- function(arr, dims){
   DIM = dim(arr)
-  MARGIN = which(DIM==dims)
-  if (length(MARGIN)!=0){
-    if( !all(DIM[-MARGIN]==1) ){
+  EXCLUDE = which(DIM==dims) #### find out the margin that will be excluded
+  if (length(EXCLUDE)!=0){
+    if( !all(DIM[-EXCLUDE]==1) ){
       errmsg = sprintf("All non-singleton dimensions must be equal: Array 1 [%s] , Wanted shape: [%s]",
                        paste(DIM,collapse = ','),
                        paste(dims,collapse = ','))
       stop(errmsg)
     }
-    perm <- c(MARGIN, seq_along(dims)[-MARGIN])
+    perm <- c(EXCLUDE, seq_along(dims)[-EXCLUDE])
   }else{
     perm <- c(seq_along(dims))
   }
@@ -64,7 +64,8 @@ bsxfun <-  function(arrA,arrB,FUN = '+',...){
    }
 
    arrL = list(arrA,arrB)
-   orient <- order(sapply(arrL,length))
+   orient <- order(sapply(list(dimA,dimB),length))
+   # orient <- order(sapply(arrL,length))
    arrL = arrL[orient]
    dim1 <- dim(arrL[[1]])
    dim2 <- dim(arrL[[2]])
@@ -139,3 +140,97 @@ if (interactive()){
 #   stopifnot(identical(erg_1,erg_2,erg_3))
 #
 # }
+
+#' @export
+expand_dims<-function(arr,before){
+  DIM <- dim(arr)
+  afters = before - 1
+  for (after in afters){
+    DIM <- append(DIM,1,after)
+  }
+  dim(arr) <- DIM
+  arr
+}
+
+
+#' @source http://r.789695.n4.nabble.com/array-slice-notation-td902486.html
+#' @export
+arr_slice <- function(A, idx, axis = 1){
+  DIM = dim(A)
+  NDIM= length(DIM)
+  idxlst = as.list(rep(T, NDIM))
+  idxlst[[axis]]= idx
+  # idxlst = c(1,T,T)
+  do.call("[", c(list(A),idxlst))
+}
+
+#' A complicated version that slices along multiple axes
+arr_slice.list <- function(A, idx, axis = 1
+            # ,setVal =
+            ){
+  DIM = dim(A)
+  NDIM= length(DIM)
+  idxlst = as.list(rep(T, NDIM))
+  if (is.matrix(idx)){
+    listbymar <- function(m,MARGIN=2){
+      #### Convert an array to list by a margin
+      unlist(apply(m,MARGIN,list),recursive = F)
+    }
+    idx <- listbymar(idx,2)
+  }else if(is.vector(idx)){
+    idx = list(idx)
+  }else{
+    stop()
+  }
+  idxlst[axis]= idx
+  # print(idxlst)
+  # idxlst = c(1,T,T)
+  do.call("[", c(list(A),idxlst) )
+}
+
+#' Fix some weird data.frame
+#' @source https://stackoverflow.com/questions/49162079/why-does-array-returns-a-data-frame-as-it-is-in-r
+#' @export
+array2array <-function(arr,callback=identical){
+array(callback(unlist(arr)),dim(arr)  )
+}
+
+### Example
+# {
+#   a = do.call(expand.grid,rep(list(0:2),7))
+#   is(a)
+#   # [1] "data.frame" "list"       "oldClass"   "vector"
+#
+#   # b = as.array(a)  #### This does not work
+#   b = array(a)
+#   is(b)
+#   # [1] "data.frame" "list"       "oldClass"   "vector"
+#   is.array(b)
+#   # TRUE
+#   is.data.frame(b)
+#   c = array2array(b)
+#   is(c)
+#   ## [1] "matrix"    "array"     "structure" "vector"
+# }
+
+#' @source https://stackoverflow.com/questions/4452039/rs-
+#' equivalent-to-ind2sub-sub2ind-in-matlab/4455502
+#' @export
+sub2ind <- function(r,c,m=NULL,mat=NULL){
+  if (is.null(m)){
+    if (is.null(mat)){
+      stop()
+    }
+    m <- nrow(mat)
+  }
+  ind = (c-1)*m + r
+}
+#### Example
+# A = matrix(1:9,3,3)
+# rc = cbind(c(1,3),2:1)
+# r = rc[,1]
+# c = rc[,2]
+#
+# A[r,c]
+# A[sub2ind(mat=A,r,c)]
+
