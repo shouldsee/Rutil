@@ -1,11 +1,18 @@
 ##### Quoted from http://adv-r.had.co.nz/Function-operators.html
 #' @export
-function(f, ...) {
+partial <-function(f, ...,list.arg=F) {
+  'Source: https://stackoverflow.com/questions/32173901/how-to-efficiently-partially-apply-a-function-in-r  by josliber '
   l <- list(...)
+  if(list.arg){
+    l = as.list(l[[1]])
+  }else{
+    ;
+  }
   function(...) {
     do.call(f, c(l, list(...)))
   }
 }
+
 
 #' @export
 combine_args <- function (f) {
